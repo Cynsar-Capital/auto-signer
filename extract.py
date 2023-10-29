@@ -107,7 +107,7 @@ def refined_multi_page_get_text_coordinates(pdf_path, identifiers):
     return coordinates_dict
 
 
-def adjust_signature_coordinates(coordinates_dict,reference_text_distance=30, spacing=5):
+def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, spacing=5):
     """
     Adjust coordinates based on proximity and reference text.
     """
