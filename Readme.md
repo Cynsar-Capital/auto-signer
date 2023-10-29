@@ -17,7 +17,7 @@ AutoSigner is a Python-based utility designed to automate the process of placing
 ## Setup
 1. Clone the repository.
 ```
-git clone https://github.com/Cynsar-Capital/AutoSigner.git
+git clone https://github.com/Cynsar-Capital/auto-signer.git
 ```
 2. Navigate to the project directory.
 ```
