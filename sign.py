@@ -15,6 +15,8 @@ def sign_pdf(input_pdf_path, temp_pdf_path, output_pdf_path, signatures, identif
         pdf = PdfReader(pdf_file)
         num_pages = len(pdf.pages)
 
+    coordinates_dict = {}
+    
     if num_pages > 2:
         coordinates_dict = modified_extraction_with_proximity_check(temp_pdf_path, identifiers)
     if not any(coordinates_dict.values()):
@@ -23,23 +25,33 @@ def sign_pdf(input_pdf_path, temp_pdf_path, output_pdf_path, signatures, identif
     if adjust_coords and check_proximity:
         coordinates_dict = adjust_signature_coordinates(coordinates_dict, reference_text_distance, spacing)
     
-    else:
-        # End up sing this its better
+    elif num_pages < 2 and not adjust_coords and not check_proximity:
         coordinates_dict = get_text_coordinates(temp_pdf_path, identifiers)
+
+    else:
+    # You can add any other conditions or fallback logic here if needed
+        coordinates_dict = get_text_coordinates(temp_pdf_path, identifiers)
+
 
     print('Coordinates found for,', coordinates_dict)
 
 
     for index, (signature_path, identifier_text) in enumerate(zip(signatures, identifiers)):
         if identifier_text in coordinates_dict:
-            for coordinates in coordinates_dict[identifier_text]:
-                x_offset = offset_increment
-                y_offset = index * offset_increment
-                modified_add_signature_with_offset(temp_pdf_path, output_pdf_path, signature_path, coordinates, x_offset, y_offset)
-                # After adding the signature, copy the output to temp for the next iteration
-                shutil.copy(output_pdf_path, temp_pdf_path)
+            coordinates = coordinates_dict[identifier_text]
+            # Check if coordinates is an iterable with at least three values
+            if not isinstance(coordinates, (list, tuple)) or len(coordinates) < 3:
+                print(f"Unexpected coordinates format for identifier '{identifier_text}': {coordinates}")
+                continue
+
+            x_offset = offset_increment
+            y_offset = index * offset_increment
+            modified_add_signature_with_offset(temp_pdf_path, output_pdf_path, signature_path, coordinates, x_offset, y_offset)
+            # After adding the signature, copy the output to temp for the next iteration
+            shutil.copy(output_pdf_path, temp_pdf_path)
         else:
             print(f"Identifier '{identifier_text}' not found in {temp_pdf_path}.")
+
 
     # Once all signatures are added, you can remove the temp file
     os.remove(temp_pdf_path)

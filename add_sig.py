@@ -5,7 +5,7 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 
 
-scale_factor = 1
+scale_factor = 1.2
 
 def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates):
 
