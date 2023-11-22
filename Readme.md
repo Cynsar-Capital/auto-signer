@@ -45,4 +45,5 @@ python sign.py --input_pdf [INPUT_PDF_PATH] --output_pdf [OUTPUT_PDF_PATH] --sig
 4. **Customizable Layouts**: Allow users to choose from a set of layouts for placing multiple signatures.
 5. **Integration with Cloud Storage**: Integrate with cloud storage solutions like Google Drive or Dropbox for easier access and processing of PDFs and signatures.
 6. **Interactive UI**: Create an interactive UI where users can visually select where they want signatures placed on the PDF.
+7. **Single Identifiers**: If the page has the identifiers listed somewhere as paragraph need more rules to avoid that.
 

@@ -112,6 +112,7 @@ def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, s
     Adjust coordinates based on proximity and reference text.
     """
     adjusted_coordinates = {}
+    
 
     # A set to keep track of processed coordinates to avoid double adjustments
     processed_coords = set()

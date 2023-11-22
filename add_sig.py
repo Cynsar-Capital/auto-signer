@@ -5,9 +5,9 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 
 
-scale_factor = 1.2
 
-def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates):
+
+def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates, scale_factor):
 
     print("Adding Signature to the,",input_pdf_path, signature_path)
     
@@ -52,14 +52,19 @@ def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordi
 
 
 
-def modified_add_signature_with_offset(input_pdf_path, output_pdf_path, signature_path, coordinates, x_offset,  y_offset):
+def modified_add_signature_with_offset(input_pdf_path, output_pdf_path, signature_path, coordinates, x_offset,  y_offset, scale_factor):
     """
     Add signature to PDF with a y-offset and verify its addition based on content at expected coordinates.
     """
-    x, y, target_page_num = coordinates
-    # x -= x_offset
-    # y -= y_offset  # Apply the y-offset if the signed output is not desired
-    overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, (x, y, target_page_num))
+    if x_offset and y_offset: 
+         # Apply the y-offset if the signed output is not desired
+        x, y, target_page_num = coordinates
+        x -= x_offset
+        y -= y_offset 
+    else: 
+        x, y, target_page_num = coordinates
+    
+    overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, (x, y, target_page_num), scale_factor)
     
     # Verify if there's content at the expected signature coordinates
     if not verify_content_at_coordinates(output_pdf_path, (x, y, target_page_num)):
@@ -70,10 +75,11 @@ def modified_add_signature_with_offset(input_pdf_path, output_pdf_path, signatur
 
 
 
-def create_signature_pdf(signature_path, coordinates, page_size):
+def create_signature_pdf(signature_path, coordinates, page_size, scale_factor=0):
     """
     Create a PDF with the signature image at the specified coordinates.
     """
+    print('Creating signature PDF', signature_path, page_size)
     # Create a new PDF in memory
     output = BytesIO()
     c = canvas.Canvas(output, pagesize=page_size)
@@ -94,7 +100,7 @@ def create_signature_pdf(signature_path, coordinates, page_size):
     return output
 
 
-def overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates):
+def overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates, scale_factor):
     """
     Overlay the signature image directly onto the PDF at the specified coordinates.
     """
@@ -102,7 +108,7 @@ def overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, co
     with open(input_pdf_path, "rb") as pdf_file:
         pdf = PdfReader(pdf_file)
         page_size = pdf.pages[0].mediabox[2], pdf.pages[0].mediabox[3]  # Extract width and height from the first page
-        signature_pdf_stream = create_signature_pdf(signature_path, coordinates, page_size)
+        signature_pdf_stream = create_signature_pdf(signature_path, coordinates, page_size, scale_factor)
         signature_pdf = PdfReader(signature_pdf_stream)
         
         # Merge the signature PDF with the original PDF
