@@ -37,7 +37,7 @@ def verify_signature_in_pdf(pdf_path, signature_path):
     return False
 
 
-def verify_content_at_coordinates(pdf_path, coordinates):
+def verify_content_at_coordinates(pdf_path, coordinates, footer_padding=100):
     """
     Verify if there's any content at the specified coordinates in the PDF.
     """
@@ -47,7 +47,7 @@ def verify_content_at_coordinates(pdf_path, coordinates):
             for element in page_layout:
                 if isinstance(element, LTTextContainer):
                     # Check if the element's bounding box intersects with the target coordinates
-                    if element.x0 <= x <= element.x1 and element.y0 <= y <= element.y1:
+                    if element.x0 <= x <= element.x1 and y <= element.y1 <= y + footer_padding:
                         return True
     return False
 
@@ -58,7 +58,7 @@ def modified_multi_page_get_text_coordinates(pdf_path, identifiers):
     Returns a dictionary where each identifier maps to a list of coordinates (x, y, page number).
     """
     coordinates_dict = {identifier: [] for identifier in identifiers}
-    
+
     for page_num, page_layout in enumerate(extract_pages(pdf_path)):
         for element in page_layout:
             if isinstance(element, LTTextContainer):
@@ -68,7 +68,7 @@ def modified_multi_page_get_text_coordinates(pdf_path, identifiers):
                             x = (text_line.x0 + text_line.x1) / 2
                             y = (text_line.y0 + text_line.y1) / 2
                             coordinates_dict[identifier].append((x, y, page_num))
-    
+
     # Filter out identifiers without any coordinates
     coordinates_dict = {k: v for k, v in coordinates_dict.items() if v}
     return coordinates_dict
@@ -79,7 +79,7 @@ def modified_extraction_with_proximity_check(pdf_path, identifiers):
     Extract the coordinates of the given identifiers from the PDF with a proximity check.
     """
     coordinates_dict = modified_multi_page_get_text_coordinates(pdf_path, identifiers)
-    
+
     return filter_by_proximity_across_identifiers(coordinates_dict)
 
 
@@ -88,7 +88,7 @@ def refined_multi_page_get_text_coordinates(pdf_path, identifiers):
     Refine the extraction of coordinates to consider individual character bounding boxes.
     """
     coordinates_dict = {identifier: [] for identifier in identifiers}
-    
+
     for page_num, page_layout in enumerate(extract_pages(pdf_path)):
         for element in page_layout:
             if isinstance(element, LTTextContainer):
@@ -101,7 +101,7 @@ def refined_multi_page_get_text_coordinates(pdf_path, identifiers):
                             avg_x = sum([bbox[0] + bbox[2] for bbox in char_bboxes]) / (2 * len(char_bboxes))
                             avg_y = sum([bbox[1] + bbox[3] for bbox in char_bboxes]) / (2 * len(char_bboxes))
                             coordinates_dict[identifier].append((avg_x, avg_y, page_num))
-    
+
     # Filter out identifiers without any coordinates
     coordinates_dict = {k: v for k, v in coordinates_dict.items() if v}
     return coordinates_dict
@@ -112,7 +112,7 @@ def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, s
     Adjust coordinates based on proximity and reference text.
     """
     adjusted_coordinates = {}
-    
+
 
     # A set to keep track of processed coordinates to avoid double adjustments
     processed_coords = set()
@@ -120,7 +120,7 @@ def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, s
     for identifier, coords_list in coordinates_dict.items():
         for coords in coords_list:
             x, y, page_num = coords
-            
+
             # If this coordinate is already processed, skip it
             if coords in processed_coords:
                 continue
@@ -130,23 +130,23 @@ def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, s
                 if identifier != other_identifier:
                     for other_coords in other_coords_list:
                         other_x, other_y, other_page_num = other_coords
-                        
+
                         # If the other coordinate is already processed, skip it
                         if other_coords in processed_coords:
                             continue
-                        
+
                         if other_page_num == page_num and euclidean((x, y), (other_x, other_y)) < reference_text_distance:
                             # Adjust the x-coordinates of the second signature by adding spacing to the x-coordinate of the first signature
                             adjusted_other_x = x + spacing
-                            
+
                             if identifier not in adjusted_coordinates:
                                 adjusted_coordinates[identifier] = []
                             if other_identifier not in adjusted_coordinates:
                                 adjusted_coordinates[other_identifier] = []
-                                
+
                             adjusted_coordinates[identifier].append(coords)
                             adjusted_coordinates[other_identifier].append((adjusted_other_x, other_y, other_page_num))
-                            
+
                             # Mark these coordinates as processed
                             processed_coords.add(coords)
                             processed_coords.add(other_coords)
@@ -154,5 +154,5 @@ def adjust_signature_coordinates(coordinates_dict, reference_text_distance=30, s
                             if identifier not in adjusted_coordinates:
                                 adjusted_coordinates[identifier] = []
                             adjusted_coordinates[identifier].append(coords)
-                            
+
     return adjusted_coordinates

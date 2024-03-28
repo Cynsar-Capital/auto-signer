@@ -1,3 +1,4 @@
+from decimal import Decimal
 from PyPDF2 import PdfReader, PdfWriter, PageObject, Transformation
 from PIL import Image
 from extract import verify_content_at_coordinates
@@ -10,7 +11,7 @@ from reportlab.pdfgen import canvas
 def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates, scale_factor):
 
     print("Adding Signature to the,",input_pdf_path, signature_path)
-    
+
     img = Image.open(signature_path)
     pdf_bytes = BytesIO()
     img.save(pdf_bytes, "PDF")
@@ -23,51 +24,51 @@ def add_signature_to_pdf(input_pdf_path, output_pdf_path, signature_path, coordi
 
         # Extracting x, y coordinates and page number
         x, y, target_page_num = coordinates
-        
+
         # Iterate through the pages and add the signature only to the target page
         for page_num in range(len(pdf.pages)):
             page = pdf.pages[page_num]
-            
+
             # Check if current page is the target page
             if page_num == target_page_num:
                 # Create a blank page with the same size as the original page
-                signature_page = PageObject.create_blank_page(width=page.mediabox.width, 
+                signature_page = PageObject.create_blank_page(width=page.mediabox.width,
                                                             height=page.mediabox.height)
-                
+
                 # Apply the scaling and translation transformation to the signature's PDF page
                 signature_pdf.pages[0].add_transformation(Transformation().scale(scale_factor).translate(x, y))
-                
+
                 # Merge the signature page with the blank page
                 signature_page.merge_page(signature_pdf.pages[0])
-                
+
                 # Merge the signature page with the original page
                 page.merge_page(signature_page)
-                
+
             pdf_writer.add_page(page)
-        
+
         # Write the output
         with open(output_pdf_path, "wb") as output_file:
             pdf_writer.write(output_file)
-            
 
 
 
-def modified_add_signature_with_offset(input_pdf_path, output_pdf_path, signature_path, coordinates, x_offset,  y_offset, scale_factor):
+
+def modified_add_signature_with_offset(input_pdf_path, output_pdf_path, signature_path, coordinates, x_offset,  y_offset, scale_factor, footer_padding=20):
     """
     Add signature to PDF with a y-offset and verify its addition based on content at expected coordinates.
     """
-    if x_offset and y_offset: 
+    if x_offset and y_offset:
          # Apply the y-offset if the signed output is not desired
         x, y, target_page_num = coordinates
         x -= x_offset
-        y -= y_offset 
-    else: 
+        y -= y_offset
+    else:
         x, y, target_page_num = coordinates
-    
+
     overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, (x, y, target_page_num), scale_factor)
-    
+
     # Verify if there's content at the expected signature coordinates
-    if not verify_content_at_coordinates(output_pdf_path, (x, y, target_page_num)):
+    if not verify_content_at_coordinates(output_pdf_path, (x, y, target_page_num), footer_padding):
         print(f"Error: Content not detected at expected coordinates for signature '{signature_path}' in {output_pdf_path}.")
 
 
@@ -84,21 +85,43 @@ def create_signature_pdf(signature_path, coordinates, page_size, scale_factor=0)
     output = BytesIO()
     c = canvas.Canvas(output, pagesize=page_size)
 
-    c.setStrokeColor((0, 0, 0, 0)) 
+    c.setStrokeColor((0, 0, 0, 0))
 
     #img = ImageReader(signature_path)
-    
+
     # Place the signature image on the PDF at the specified coordinates
     x, y, _ = coordinates
     c.drawImage(signature_path, x, y, width=100*scale_factor, height=50*scale_factor, mask='auto')  # Adjust width and height as needed
-    
+
     # Save the PDF to the BytesIO stream
     c.save()
-    
+
     # Reset the stream position
     output.seek(0)
     return output
 
+
+def create_signature_pdf_without_identifier(signature_path, coordinates, page_size, scale_factor=0):
+    """
+    Create a PDF with the signature image at the specified coordinates.
+    """
+    print('Creating signature PDF, without identifiers', signature_path, page_size)
+    # Create a new PDF in memory
+    output = BytesIO()
+    c = canvas.Canvas(output, pagesize=(float(page_size[0]), float(page_size[1])))  # Convert page_size to float
+
+    c.setStrokeColor((0, 0, 0, 0))
+
+    # Place the signature image on the PDF at the specified coordinates
+    x, y, _ = coordinates
+    c.drawImage(signature_path, x, y, width=100*scale_factor, height=50*scale_factor, mask='auto')  # Adjust width and height as needed
+
+    # Save the PDF to the BytesIO stream
+    c.save()
+
+    # Reset the stream position
+    output.seek(0)
+    return output
 
 def overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, coordinates, scale_factor):
     """
@@ -108,16 +131,22 @@ def overlay_signature_on_pdf(input_pdf_path, output_pdf_path, signature_path, co
     with open(input_pdf_path, "rb") as pdf_file:
         pdf = PdfReader(pdf_file)
         page_size = pdf.pages[0].mediabox[2], pdf.pages[0].mediabox[3]  # Extract width and height from the first page
-        signature_pdf_stream = create_signature_pdf(signature_path, coordinates, page_size, scale_factor)
+        float_coordinates = (float(coordinates[0]), float(coordinates[1]), coordinates[2])
+
+        if isinstance(coordinates[0], Decimal) or isinstance(coordinates[1], Decimal):
+            signature_pdf_stream = create_signature_pdf_without_identifier(signature_path, float_coordinates, page_size, scale_factor)
+        else:
+            signature_pdf_stream = create_signature_pdf(signature_path, coordinates, page_size, scale_factor)
+
         signature_pdf = PdfReader(signature_pdf_stream)
-        
+
         # Merge the signature PDF with the original PDF
         pdf_writer = PdfWriter()
         for page_num, page in enumerate(pdf.pages):
             if page_num == coordinates[2]:  # Check if it's the target page
                 page.merge_page(signature_pdf.pages[0])
             pdf_writer.add_page(page)
-        
+
         # Write the merged PDF to the output file
         with open(output_pdf_path, "wb") as output_file:
             pdf_writer.write(output_file)
