@@ -44,7 +44,7 @@ python sign.py --input_pdf [INPUT_PDF_PATH] --output_pdf [OUTPUT_PDF_PATH] --sig
 1. **Fix Spacing Issues**: Enhance the code to handle close Signature Identifiers better and prevent appending signatures too close or on top of each other.
 2. **Signature Spacing**: If two signatures are provided, ensure that they have a predefined spacing between them for clearer visualization.
 3. **Web-based Interface**: Implement a user-friendly web interface, allowing users to easily run the utility by providing signatures, coordinates, or identifier values.
-4. **Fixing the Signature Verification**: The currnt verification process is quite tedious where the signature verification is taking place without any error.
+4. **Fixing the Signature Verification**: The current verification process is quite tedious where the signature verification is taking place without any error.
 
 ## Ideas for Improvement
 
